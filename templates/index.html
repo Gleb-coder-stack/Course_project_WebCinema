@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1 class="page-title">СЕГОДНЯ В КИНОТЕАТРЕ!</h1>
+
+<div class="movies-grid" id="moviesGrid">
+    <div style="color: white; text-align: center;">Загрузка фильмов...</div>
+</div>
+
+<div class="all-films-bottom">
+    <a href="/all-films" class="all-films-btn">
+        <span>Все фильмы</span>
+        <span class="arrow-down">▼</span>
+    </a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch('/api/movies');
+        const movies = await response.json();
+
+        const grid = document.getElementById('moviesGrid');
+        grid.innerHTML = '';
+
+        if (!movies || movies.length === 0) {
+            grid.innerHTML = '<div style="color: white; text-align: center;">Нет фильмов</div>';
+            return;
+        }
+
+        // Показываем первые 4 фильма
+        movies.slice(0, 4).forEach(movie => {
+            const card = document.createElement('div');
+            card.className = 'movie-card';
+            card.innerHTML = `
+                <div class="movie-poster"></div>
+                <div class="movie-info">
+                    <div class="movie-title">${movie.title}</div>
+                    <div class="movie-detail"><span>Жанр</span> ${movie.genre}</div>
+                    <div class="movie-detail"><span>Время</span> ${movie.duration}</div>
+                    <div class="age-badge">${movie.age_rating}</div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Ошибка:', error);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Расписание{% endblock %}
+
+{% block content %}
+<h1 class="page-title">РАСПИСАНИЕ СЕАНСОВ</h1>
+
+<div style="margin-bottom: 30px;">
+    <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+        <button onclick="showTab('upcoming')" class="btn btn-add" id="upcomingBtn">Предстоящие сеансы</button>
+        <button onclick="showTab('past')" class="btn" id="pastBtn">Прошедшие за месяц</button>
+    </div>
+</div>
+
+<div id="upcomingTab">
+    <div class="movies-grid" id="upcomingSessions">
+        <div style="color: white; text-align: center; padding: 40px;">Загрузка...</div>
+    </div>
+</div>
+
+<div id="pastTab" style="display: none;">
+    <div class="movies-grid" id="pastSessions">
+        <div style="color: white; text-align: center; padding: 40px;">Загрузка...</div>
+    </div>
+</div>
+
+<script>
+let allSessions = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSessions();
+});
+
+async function loadSessions() {
+    try {
+        const response = await fetch('/api/sessions');
+        allSessions = await response.json();
+
+        const today = new Date().toISOString().split('T')[0];
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        const monthAgoStr = monthAgo.toISOString().split('T')[0];
+
+        const upcoming = allSessions.filter(s => s.date_raw >= today);
+        const past = allSessions.filter(s => s.date_raw < today && s.date_raw >= monthAgoStr);
+
+        displaySessions(upcoming, 'upcomingSessions');
+        displaySessions(past, 'pastSessions');
+
+    } catch (error) {
+        console.error('Ошибка:', error);
+    }
+}
+
+function displaySessions(sessions, containerId) {
+    const grid = document.getElementById(containerId);
+    grid.innerHTML = '';
+
+    if (!sessions || sessions.length === 0) {
+        grid.innerHTML = '<div style="color: white; text-align: center; padding: 40px;">Нет сеансов</div>';
+        return;
+    }
+
+    sessions.forEach(session => {
+        const card = document.createElement('div');
+        card.className = 'movie-card';
+
+        let ageRating = '12+';
+        if (session.movie && session.movie.includes('Криминальное')) ageRating = '16+';
+        if (session.movie && session.movie.includes('Джон Уик')) ageRating = '18+';
+
+        card.innerHTML = `
+            <div class="movie-poster"></div>
+            <div class="movie-info">
+                <div class="movie-title">${session.movie || 'Без названия'}</div>
+                <div class="movie-detail"><span>Дата</span> ${session.date || '--'}</div>
+                <div class="movie-detail"><span>Начало</span> ${session.start_time || '--:--'}</div>
+                <div class="movie-detail"><span>Конец</span> ${session.end_time || '--:--'}</div>
+                <div class="movie-detail"><span>Зал</span> ${session.hall || '?'}</div>
+                <div class="age-badge">${ageRating}</div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function showTab(tab) {
+    const upcomingTab = document.getElementById('upcomingTab');
+    const pastTab = document.getElementById('pastTab');
+    const upcomingBtn = document.getElementById('upcomingBtn');
+    const pastBtn = document.getElementById('pastBtn');
+
+    if (tab === 'upcoming') {
+        upcomingTab.style.display = 'block';
+        pastTab.style.display = 'none';
+        upcomingBtn.style.background = '#2196F3';
+        pastBtn.style.background = '#666';
+    } else {
+        upcomingTab.style.display = 'none';
+        pastTab.style.display = 'block';
+        upcomingBtn.style.background = '#666';
+        pastBtn.style.background = '#2196F3';
+    }
+}
+</script>
+{% endblock %}

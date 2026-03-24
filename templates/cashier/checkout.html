@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Оформление продажи{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">ОФОРМЛЕНИЕ ПРОДАЖИ</h1>
+    <a href="javascript:history.back()" style="color: white; text-decoration: none;">← Назад</a>
+</div>
+
+<div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+    <!-- Информация о выбранном месте -->
+    <div style="background: linear-gradient(135deg, #6A11CB, #2575FC); color: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; text-align: center;">
+        <h2 style="margin: 0; font-size: 2rem;">Ряд: {{ row }} | Место: {{ seat_number }}</h2>
+    </div>
+
+    <!-- Информация о сеансе -->
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #333; margin-bottom: 15px;">Детали сеанса:</h3>
+        <table style="width: 100%; border-collapse: collapse; background: #f8f9fa; border-radius: 12px; overflow: hidden;">
+            <thead>
+                <tr style="background: #6A11CB; color: white;">
+                    <th style="padding: 12px;">Дата</th>
+                    <th style="padding: 12px;">Фильм</th>
+                    <th style="padding: 12px;">Время</th>
+                    <th style="padding: 12px;">Зал</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="text-align: center;">
+                    <td style="padding: 12px;">{{ session.date }}</td>
+                    <td style="padding: 12px; font-weight: bold;">{{ session.movie }}</td>
+                    <td style="padding: 12px;">{{ session.start_time }} - {{ session.end_time }}</td>
+                    <td style="padding: 12px;">{{ session.hall }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Сумма к оплате -->
+    <div style="background: #f0f0f0; padding: 20px; border-radius: 12px; margin-bottom: 30px; text-align: center;">
+        <div style="font-size: 1.2rem; color: #666;">Сумма к оплате:</div>
+        <div style="font-size: 3rem; font-weight: bold; color: #6A11CB;">{{ price }} ₽</div>
+    </div>
+
+    <form id="saleForm" onsubmit="event.preventDefault(); processSale();">
+        <input type="hidden" id="session_id" value="{{ session.id }}">
+        <input type="hidden" id="seat_id" value="{{ seat_id }}">
+        <input type="hidden" id="price" value="{{ price }}">
+
+        <!-- Способ оплаты -->
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #333; margin-bottom: 15px;">Способ оплаты:</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 10px; padding: 12px 25px; background: #f0f0f0; border-radius: 50px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="payment_method" value="Наличные" checked style="width: 18px; height: 18px;">
+                    <span style="font-size: 1.1rem;">💵 Наличные</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; padding: 12px 25px; background: #f0f0f0; border-radius: 50px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="payment_method" value="Карта" style="width: 18px; height: 18px;">
+                    <span style="font-size: 1.1rem;">💳 Карта</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; padding: 12px 25px; background: #f0f0f0; border-radius: 50px; cursor: pointer; transition: all 0.2s;">
+                    <input type="radio" name="payment_method" value="QR-код" style="width: 18px; height: 18px;">
+                    <span style="font-size: 1.1rem;">📱 QR-код</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- ФИО зрителя -->
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #333; margin-bottom: 15px;">ФИО зрителя:</h3>
+            <input type="text" id="customer_name" required
+                   placeholder="Введите фамилию, имя и отчество"
+                   style="width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 1.1rem;">
+        </div>
+
+        <!-- Кнопки -->
+        <div style="display: flex; gap: 15px;">
+            <button type="submit" class="btn btn-add" style="flex: 2; padding: 15px; font-size: 1.2rem; border: none; cursor: pointer;">
+                🎫 Купить билет
+            </button>
+            <button type="button" onclick="window.location.href='/cashier/sales'"
+                    style="flex: 1; padding: 15px; background: #666; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer;">
+                Отмена
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+async function processSale() {
+    const customerName = document.getElementById('customer_name').value.trim();
+    if (!customerName) {
+        alert('Введите ФИО зрителя');
+        return;
+    }
+
+    const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+
+    const ticketData = {
+        session_id: parseInt(document.getElementById('session_id').value),
+        seat_id: parseInt(document.getElementById('seat_id').value),
+        customer_name: customerName,
+        price: parseInt(document.getElementById('price').value),
+        payment_method: paymentMethod
+    };
+
+    console.log('Отправка данных:', ticketData);
+
+    try {
+        const response = await fetch('/api/tickets/buy', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(ticketData)
+        });
+
+        const result = await response.json();
+        console.log('Ответ сервера:', result);
+
+        if (result.success) {
+            alert('✅ Билет успешно продан!');
+            window.location.href = `/ticket/${result.id}`;
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Не удалось продать билет'));
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('❌ Ошибка при продаже билета');
+    }
+}
+</script>
+{% endblock %}

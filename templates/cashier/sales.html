@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Продажа билетов{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">Продажа билетов</h1>
+    <a href="/cashier" style="color: white; text-decoration: none;">← Главная</a>
+</div>
+
+<div style="margin-bottom: 30px;">
+    <input type="date" id="dateFilter" class="form-group" style="padding: 10px; border-radius: 8px; border: none; width: 200px;">
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Дата</th>
+            <th>Фильм</th>
+            <th>Время начала</th>
+            <th>Время окончания</th>
+            <th>Номер зала</th>
+            <th>Действие</th>
+        </tr>
+    </thead>
+    <tbody id="sessionsTableBody">
+        <!-- Данные загружаются через API -->
+    </tbody>
+</table>
+
+<script>
+    let allSessions = [];
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadSessions();
+        
+        document.getElementById('dateFilter').addEventListener('change', function(e) {
+            filterSessions(e.target.value);
+        });
+    });
+    
+    async function loadSessions() {
+        try {
+            allSessions = await apiCall('/api/sessions');
+            displaySessions(allSessions);
+        } catch (error) {
+            console.error('Ошибка загрузки сеансов:', error);
+        }
+    }
+    
+    function displaySessions(sessions) {
+        const tbody = document.getElementById('sessionsTableBody');
+        tbody.innerHTML = '';
+        
+        sessions.forEach(session => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${session.date}</td>
+                <td>${session.movie}</td>
+                <td>${session.start_time}</td>
+                <td>${session.end_time}</td>
+                <td>${session.hall}</td>
+                <td>
+                    <button class="btn btn-add" onclick="selectSession(${session.id})">Выбрать места</button>
+                </td>
+            `;
+        });
+    }
+    
+    function filterSessions(date) {
+        if (!date) {
+            displaySessions(allSessions);
+            return;
+        }
+        
+        const filtered = allSessions.filter(s => s.date_raw === date);
+        displaySessions(filtered);
+    }
+    
+    function selectSession(sessionId) {
+        window.location.href = `/cashier/hall/${sessionId}`;
+    }
+</script>
+{% endblock %}

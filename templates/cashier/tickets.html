@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Проданные билеты{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">ПРОДАННЫЕ БИЛЕТЫ</h1>
+    <a href="/cashier" style="color: white; text-decoration: none;">← Назад</a>
+</div>
+
+<!-- Панель фильтров и отчета -->
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end;">
+        <div>
+            <label style="color: white; display: block; margin-bottom: 5px;">Выберите сеанс:</label>
+            <select id="sessionSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem;">
+                <option value="">Все сеансы</option>
+            </select>
+        </div>
+        <div>
+            <button onclick="generateWordReport()" class="btn btn-add" style="padding: 12px 30px; white-space: nowrap;">
+                📄 Сформировать отчет WORD
+            </button>
+        </div>
+    </div>
+
+    <div style="margin-top: 15px;">
+        <button onclick="applyFilter()" class="btn btn-add" style="background: #2196F3;">Применить фильтр</button>
+        <button onclick="resetFilter()" class="btn" style="background: #666; margin-left: 10px;">Сбросить</button>
+    </div>
+</div>
+
+<!-- Таблица билетов -->
+<div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden;">
+        <thead>
+            <tr style="background: #6A11CB; color: white;">
+                <th style="padding: 12px;">ID</th>
+                <th style="padding: 12px;">Дата</th>
+                <th style="padding: 12px;">Фильм</th>
+                <th style="padding: 12px;">Время</th>
+                <th style="padding: 12px;">Зал</th>
+                <th style="padding: 12px;">Ряд</th>
+                <th style="padding: 12px;">Место</th>
+                <th style="padding: 12px;">Зритель</th>
+                <th style="padding: 12px;">Цена</th>
+                <th style="padding: 12px;">Оплата</th>
+                <th style="padding: 12px;">Статус</th>
+             </tr>
+        </thead>
+        <tbody id="ticketsTableBody">
+            <tr><td colspan="11" style="text-align: center; padding: 20px;">Загрузка...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Статистика -->
+<div style="display: flex; gap: 30px; margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 16px; color: white; flex-wrap: wrap;">
+    <div><strong>Всего билетов:</strong> <span id="totalCount">0</span></div>
+    <div><strong>Общая выручка:</strong> <span id="totalRevenue">0</span> ₽</div>
+    <div><strong>Средняя цена:</strong> <span id="avgPrice">0</span> ₽</div>
+    <div><strong>Возвратов:</strong> <span id="returnedCount">0</span></div>
+</div>
+
+<script>
+let sessions = [];
+let allTickets = [];
+let currentFilter = '';
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSessions();
+    await loadTickets();
+});
+
+async function loadSessions() {
+    try {
+        const response = await fetch('/api/sessions');
+        sessions = await response.json();
+
+        const select = document.getElementById('sessionSelect');
+        sessions.forEach(session => {
+            const option = document.createElement('option');
+            option.value = session.id;
+            option.textContent = `${session.date} ${session.start_time} - ${session.movie} (Зал ${session.hall})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки сеансов:', error);
+    }
+}
+
+async function loadTickets() {
+    try {
+        const sessionId = document.getElementById('sessionSelect').value;
+        let url = '/api/tickets-list';
+        if (sessionId) {
+            url += `?session_id=${sessionId}`;
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        let tickets = [];
+        if (Array.isArray(data)) {
+            tickets = data;
+        }
+
+        allTickets = tickets;
+        displayTickets(tickets);
+        updateStatistics(tickets);
+
+    } catch (error) {
+        console.error('Ошибка загрузки билетов:', error);
+        document.getElementById('ticketsTableBody').innerHTML =
+            '<tr><td colspan="11" style="text-align: center; color: red; padding: 20px;">Ошибка загрузки данных</td></tr>';
+    }
+}
+
+function displayTickets(tickets) {
+    const tbody = document.getElementById('ticketsTableBody');
+    tbody.innerHTML = '';
+
+    if (!tickets || tickets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 20px;">Нет проданных билетов</td></tr>';
+        return;
+    }
+
+    tickets.forEach(ticket => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td style="padding: 10px;">${ticket.id || ''}</td>
+            <td style="padding: 10px;">${ticket.session_date || ''}</td>
+            <td style="padding: 10px;">${ticket.movie || ''}</td>
+            <td style="padding: 10px;">${ticket.start_time || ''} - ${ticket.end_time || ''}</td>
+            <td style="padding: 10px;">${ticket.hall || ''}</td>
+            <td style="padding: 10px;">${ticket.row_number || ''}</td>
+            <td style="padding: 10px;">${ticket.seat_number || ''}</td>
+            <td style="padding: 10px;">${ticket.customer_name || ''}</td>
+            <td style="padding: 10px;">${ticket.price || 0} ₽</td>
+            <td style="padding: 10px;">${ticket.payment_method || ''}</td>
+            <td style="padding: 10px;">${ticket.is_returned ? '❌ Возврат' : '✅ Продан'}</td>
+        `;
+    });
+}
+
+function updateStatistics(tickets) {
+    if (!tickets || tickets.length === 0) {
+        document.getElementById('totalCount').textContent = '0';
+        document.getElementById('totalRevenue').textContent = '0';
+        document.getElementById('avgPrice').textContent = '0';
+        document.getElementById('returnedCount').textContent = '0';
+        return;
+    }
+
+    const total = tickets.length;
+    const revenue = tickets.reduce((sum, t) => sum + (t.price || 0), 0);
+    const avg = total > 0 ? Math.round(revenue / total) : 0;
+    const returned = tickets.filter(t => t.is_returned).length;
+
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('totalRevenue').textContent = revenue;
+    document.getElementById('avgPrice').textContent = avg;
+    document.getElementById('returnedCount').textContent = returned;
+}
+
+function applyFilter() {
+    loadTickets();
+}
+
+function resetFilter() {
+    document.getElementById('sessionSelect').value = '';
+    loadTickets();
+}
+
+function generateWordReport() {
+    const sessionId = document.getElementById('sessionSelect').value;
+    if (!sessionId) {
+        alert('Пожалуйста, выберите сеанс для формирования отчета');
+        return;
+    }
+
+    // Открываем отчет в новой вкладке
+    window.open(`/api/reports/word/${sessionId}`, '_blank');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Управление тарифами{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">УПРАВЛЕНИЕ ТАРИФАМИ</h1>
+    <a href="/admin" style="color: white; text-decoration: none;">← Назад</a>
+</div>
+
+<button onclick="showAddForm()" class="btn btn-add">+ Добавить тариф</button>
+
+<!-- Форма добавления/редактирования -->
+<div id="tariffForm"
+     style="display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+    <h3 id="formTitle" style="color: white; margin-bottom: 20px;">Новый тариф</h3>
+    <input type="hidden" id="editId" value="">
+
+    <div class="form-group">
+        <label>Название тарифа</label>
+        <input type="text" id="tariff_name" placeholder="Стандарт" required
+               style="width: 100%; padding: 10px; border-radius: 8px; border: none;">
+    </div>
+
+    <div class="form-group">
+        <label>Цена (₽)</label>
+        <input type="number" id="price" required style="width: 100%; padding: 10px; border-radius: 8px; border: none;">
+    </div>
+
+    <button onclick="saveTariff()" class="btn btn-add">Сохранить</button>
+    <button onclick="hideForm()" class="btn" style="background: #666;">Отмена</button>
+</div>
+
+<!-- Таблица тарифов -->
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Тариф</th>
+        <th>Цена</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody id="tariffsTableBody">
+    <tr>
+        <td colspan="4" style="text-align: center;">Загрузка...</td>
+    </tr>
+    </tbody>
+</table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', loadTariffs);
+
+    async function loadTariffs() {
+        try {
+            const response = await fetch('/api/tariffs');
+            const tariffs = await response.json();
+
+            const tbody = document.getElementById('tariffsTableBody');
+            tbody.innerHTML = '';
+
+            tariffs.forEach(tariff => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${tariff.id}</td>
+                    <td>${tariff.name}</td>
+                    <td>${tariff.price} ₽</td>
+                    <td>
+                        <button class="btn btn-edit" onclick='editTariff(${JSON.stringify(tariff)})'>✏️ Ред.</button>
+                        <button class="btn btn-delete" onclick="deleteTariff(${tariff.id})">🗑️ Удал.</button>
+                    </td>
+                `;
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки:', error);
+        }
+    }
+
+    function showAddForm() {
+        document.getElementById('formTitle').textContent = 'Новый тариф';
+        document.getElementById('editId').value = '';
+        document.getElementById('tariff_name').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('tariffForm').style.display = 'block';
+    }
+
+    function editTariff(tariff) {
+        document.getElementById('formTitle').textContent = 'Редактирование тарифа';
+        document.getElementById('editId').value = tariff.id;
+        document.getElementById('tariff_name').value = tariff.name;
+        document.getElementById('price').value = tariff.price;
+        document.getElementById('tariffForm').style.display = 'block';
+    }
+
+    function hideForm() {
+        document.getElementById('tariffForm').style.display = 'none';
+    }
+
+    async function saveTariff() {
+        const id = document.getElementById('editId').value;
+        const tariffData = {
+            name: document.getElementById('tariff_name').value,
+            price: parseInt(document.getElementById('price').value)
+        };
+
+        if (!tariffData.name || !tariffData.price) {
+            alert('Заполните все поля');
+            return;
+        }
+
+        try {
+            let response;
+            if (id) {
+                response = await fetch(`/api/tariffs/update/${id}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(tariffData)
+                });
+            } else {
+                response = await fetch('/api/tariffs/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(tariffData)
+                });
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                hideForm();
+                await loadTariffs();
+                alert(id ? '✅ Тариф обновлен' : '✅ Тариф добавлен');
+            } else {
+                alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            alert('❌ Ошибка сохранения');
+        }
+    }
+
+    async function deleteTariff(id) {
+        if (!confirm('Удалить тариф?')) return;
+
+        try {
+            const response = await fetch(`/api/tariffs/delete/${id}`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+            if (result.success) {
+                await loadTariffs();
+                alert('✅ Тариф удален');
+            } else {
+                alert('❌ Ошибка: ' + (result.error || 'Не удалось удалить'));
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            alert('❌ Ошибка удаления');
+        }
+    }
+</script>
+{% endblock %}

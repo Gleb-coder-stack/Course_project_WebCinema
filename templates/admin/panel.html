@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Панель администратора{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Панель администратора</h1>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+    <a href="/admin/movies" style="text-decoration: none;">
+        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; text-align: center; border: 2px solid white; transition: transform 0.2s;"
+             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <h3 style="color: white; font-size: 1.5rem;">🎬 Фильмы</h3>
+        </div>
+    </a>
+
+    <a href="/admin/sessions" style="text-decoration: none;">
+        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; text-align: center; border: 2px solid white; transition: transform 0.2s;"
+             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <h3 style="color: white; font-size: 1.5rem;">📅 Сеансы</h3>
+        </div>
+    </a>
+
+    <a href="/admin/tariffs" style="text-decoration: none;">
+        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; text-align: center; border: 2px solid white; transition: transform 0.2s;"
+             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <h3 style="color: white; font-size: 1.5rem;">💰 Цены</h3>
+        </div>
+    </a>
+
+    <a href="/admin/users" style="text-decoration: none;">
+        <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 16px; text-align: center; border: 2px solid white; transition: transform 0.2s;"
+             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <h3 style="color: white; font-size: 1.5rem;">👥 Пользователи</h3>
+        </div>
+    </a>
+</div>
+{% endblock %}

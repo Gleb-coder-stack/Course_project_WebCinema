@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Схема зала{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">СХЕМА ЗАЛА</h1>
+    <a href="/cashier/sales" style="color: white; text-decoration: none;">← К списку сеансов</a>
+</div>
+
+<!-- Информация о выбранном сеансе -->
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px; color: white;">
+    <h3>Выбранный сеанс:</h3>
+    <table style="background: transparent; color: white; width: 100%;">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Фильм</th>
+                <th>Время начала</th>
+                <th>Время окончания</th>
+                <th>Номер зала</th>
+            </tr>
+        </thead>
+        <tbody id="sessionInfo">
+            <tr>
+                <td colspan="5" style="text-align: center;">Загрузка...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Схема зала -->
+<div class="hall-scheme" style="background: white; padding: 30px; border-radius: 16px;">
+    <div class="screen">Э К Р А Н</div>
+
+    <div id="seatsContainer" style="margin: 30px 0; min-height: 300px;">
+        <p style="text-align: center; color: #666;">Загрузка схемы зала...</p>
+    </div>
+
+    <!-- Легенда -->
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e0e0e0;"></div>
+            <span>Стандарт (350₽)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ffd700;"></div>
+            <span>VIP (500₽)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ff6b6b;"></div>
+            <span>Премиум (700₽)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #666;"></div>
+            <span>Занято</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #6A11CB;"></div>
+            <span>Выбрано</span>
+        </div>
+    </div>
+
+    <!-- Типы мест по рядам -->
+    <div class="legend" style="margin-top: 15px;">
+        <div class="legend-item"><span>1–3 ряды - Премиум (700₽)</span></div>
+        <div class="legend-item"><span>4–6 ряды - VIP (500₽)</span></div>
+        <div class="legend-item"><span>7–10 ряды - Стандарт (350₽)</span></div>
+    </div>
+</div>
+
+<!-- Информация о выбранном месте -->
+<div id="selectedSeatInfo" style="background: white; padding: 20px; border-radius: 16px; margin-top: 20px; display: none;">
+    <h3>Выбранное место:</h3>
+    <p style="font-size: 1.8rem; font-weight: bold; margin: 10px 0;" id="selectedSeatText">Ряд: - Место: -</p>
+    <p style="font-size: 1.2rem;" id="selectedSeatPrice"></p>
+    <button onclick="goToCheckout()" class="btn btn-add" style="font-size: 1.2rem; padding: 15px 30px; width: 100%;">Оформить продажу</button>
+</div>
+
+<style>
+.seat {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 2px solid #ccc;
+    transition: all 0.2s;
+    margin: 2px;
+}
+
+.seat.standard {
+    background: #e0e0e0;
+}
+
+.seat.vip {
+    background: #ffd700;
+}
+
+.seat.premium {
+    background: #ff6b6b;
+}
+
+.seat.sold {
+    background: #666 !important;
+    color: white;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.seat.selected {
+    border: 4px solid #6A11CB !important;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px #6A11CB;
+    z-index: 10;
+}
+
+.seat:hover:not(.sold) {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.seat-row {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    margin-bottom: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.row-label {
+    min-width: 60px;
+    font-weight: bold;
+    color: #333;
+    text-align: right;
+    padding-right: 10px;
+}
+
+.screen {
+    background: linear-gradient(135deg, #333, #555);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 40px;
+    border-radius: 50% 50% 10px 10px;
+    font-weight: bold;
+    font-size: 1.5rem;
+    letter-spacing: 10px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+.legend {
+    display: flex;
+    gap: 25px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+}
+
+.legend-color {
+    width: 25px;
+    height: 25px;
+    border-radius: 6px;
+    border: 2px solid #ccc;
+}
+
+.loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #6A11CB;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+const sessionId = {{ session_id }};
+console.log('ID сеанса:', sessionId);
+
+let sessionData = null;
+let soldSeats = [];
+let selectedSeat = null;
+let allSeats = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Загрузка данных для сеанса:', sessionId);
+
+    if (!sessionId) {
+        showError('ID сеанса не указан');
+        return;
+    }
+
+    await loadSessionData();
+});
+
+async function loadSessionData() {
+    try {
+        console.log('Загрузка информации о сеансе...');
+        const response = await fetch(`/api/session/${sessionId}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        sessionData = await response.json();
+        console.log('Данные сеанса:', sessionData);
+
+        if (!sessionData) {
+            throw new Error('Сеанс не найден');
+        }
+
+        // Отображаем информацию о сеансе
+        document.getElementById('sessionInfo').innerHTML = `
+            <tr>
+                <td style="padding: 12px;">${sessionData.date || '—'}</td>
+                <td style="padding: 12px;">${sessionData.movie || '—'}</td>
+                <td style="padding: 12px;">${sessionData.start_time || '—'}</td>
+                <td style="padding: 12px;">${sessionData.end_time || '—'}</td>
+                <td style="padding: 12px;">${sessionData.hall || '—'}</td>
+            </tr>
+        `;
+
+        // Загружаем остальные данные
+        await Promise.all([
+            loadSoldTickets(),
+            loadSeats()
+        ]);
+
+    } catch (error) {
+        console.error('Ошибка загрузки сеанса:', error);
+        document.getElementById('sessionInfo').innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; color: #ff6b6b; padding: 20px;">
+                    Ошибка загрузки: ${error.message}
+                    <br>
+                    <button onclick="location.reload()" style="margin-top: 10px; padding: 5px 15px; background: #6A11CB; color: white; border: none; border-radius: 5px; cursor: pointer;">Повторить</button>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+async function loadSoldTickets() {
+    try {
+        console.log('Загрузка проданных билетов...');
+        const response = await fetch(`/api/tickets/${sessionId}`);
+        const tickets = await response.json();
+        console.log('Проданные билеты:', tickets);
+        soldSeats = tickets.map(t => t.seat_id);
+    } catch (error) {
+        console.error('Ошибка загрузки билетов:', error);
+    }
+}
+
+async function loadSeats() {
+    if (!sessionData || !sessionData.hall_id) {
+        console.log('Нет hall_id, ждем данные сеанса...');
+        setTimeout(loadSeats, 500);
+        return;
+    }
+
+    try {
+        console.log('Загрузка мест для зала:', sessionData.hall_id);
+        const response = await fetch(`/api/seats/${sessionData.hall_id}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        allSeats = await response.json();
+        console.log('Загружено мест:', allSeats.length);
+
+        if (allSeats.length > 0) {
+            renderSeats();
+        } else {
+            document.getElementById('seatsContainer').innerHTML = '<p style="text-align: center; color: #ff6b6b;">Нет данных о местах</p>';
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки мест:', error);
+        document.getElementById('seatsContainer').innerHTML = `<p style="text-align: center; color: #ff6b6b;">Ошибка загрузки мест: ${error.message}</p>`;
+    }
+}
+
+function renderSeats() {
+    console.log('Отрисовка мест, все места:', allSeats);
+    console.log('Проданные места (ID):', soldSeats);
+
+    // Проверяем, что soldSeats не пустой
+    if (soldSeats && soldSeats.length > 0) {
+        console.log('Есть проданные места, ID:', soldSeats);
+    } else {
+        console.log('Нет проданных мест');
+    }
+
+    const container = document.getElementById('seatsContainer');
+    container.innerHTML = '';
+
+    // Группируем места по рядам
+    const rows = {};
+    allSeats.forEach(seat => {
+        if (!rows[seat.row]) rows[seat.row] = [];
+        rows[seat.row].push(seat);
+    });
+
+    // Сортируем ряды
+    const sortedRows = Object.keys(rows).sort((a, b) => parseInt(a) - parseInt(b));
+    console.log('Найдено рядов:', sortedRows.length);
+
+    if (sortedRows.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #ff6b6b;">Нет мест для отображения</p>';
+        return;
+    }
+
+    // Создаем ряды
+    sortedRows.forEach(rowNum => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'seat-row';
+
+        // Добавляем номер ряда
+        const rowLabel = document.createElement('div');
+        rowLabel.className = 'row-label';
+        rowLabel.textContent = `Ряд ${rowNum}`;
+        rowDiv.appendChild(rowLabel);
+
+        // Сортируем места в ряду
+        rows[rowNum].sort((a, b) => a.seat - b.seat).forEach(seat => {
+            const isSold = soldSeats.includes(seat.id);
+            const isSelected = selectedSeat && selectedSeat.id === seat.id;
+
+            const seatDiv = document.createElement('div');
+            seatDiv.className = 'seat';
+
+            // Определяем класс для типа места
+            let seatTypeClass = 'standard';
+            const typeLower = (seat.type || '').toLowerCase();
+            if (typeLower.includes('vip')) seatTypeClass = 'vip';
+            else if (typeLower.includes('премиум')) seatTypeClass = 'premium';
+
+            seatDiv.classList.add(seatTypeClass);
+            if (isSold) seatDiv.classList.add('sold');
+            if (isSelected) seatDiv.classList.add('selected');
+
+            seatDiv.dataset.seatId = seat.id;
+            seatDiv.dataset.row = seat.row;
+            seatDiv.dataset.seat = seat.seat;
+            seatDiv.dataset.type = seat.type || 'Стандарт';
+            seatDiv.dataset.price = seat.price || 350;
+            seatDiv.dataset.sold = isSold;
+
+            // Убираем цифры, оставляем пустым
+            seatDiv.textContent = '';
+
+            // Добавляем обработчик только если место свободно
+            if (!isSold) {
+                seatDiv.onclick = function() { selectSeat(this); };
+            } else {
+                seatDiv.style.cursor = 'not-allowed';
+            }
+
+            rowDiv.appendChild(seatDiv);
+        });
+
+        container.appendChild(rowDiv);
+    });
+}
+
+function selectSeat(element) {
+    if (element.dataset.sold === 'true') {
+        alert('Это место уже занято');
+        return;
+    }
+
+    // Снимаем выделение с предыдущего места
+    if (selectedSeat) {
+        const prevSelected = document.querySelector(`[data-seat-id="${selectedSeat.id}"]`);
+        if (prevSelected) prevSelected.classList.remove('selected');
+    }
+
+    // Выделяем новое место
+    element.classList.add('selected');
+
+    // Сохраняем выбранное место
+    selectedSeat = {
+        id: parseInt(element.dataset.seatId),
+        row: parseInt(element.dataset.row),
+        seat: parseInt(element.dataset.seat),
+        type: element.dataset.type,
+        price: parseInt(element.dataset.price)
+    };
+
+    console.log('Выбрано место:', selectedSeat);
+
+    // Обновляем информацию
+    document.getElementById('selectedSeatText').textContent = `Ряд: ${selectedSeat.row} Место: ${selectedSeat.seat}`;
+    document.getElementById('selectedSeatPrice').textContent = `Тип: ${selectedSeat.type}, Цена: ${selectedSeat.price}₽`;
+    document.getElementById('selectedSeatInfo').style.display = 'block';
+}
+
+function goToCheckout() {
+    if (!selectedSeat) {
+        alert('Выберите место');
+        return;
+    }
+    window.location.href = `/cashier/checkout?session_id=${sessionId}&seat_id=${selectedSeat.id}&row=${selectedSeat.row}&seat=${selectedSeat.seat}&price=${selectedSeat.price}`;
+}
+
+function showError(message) {
+    document.getElementById('sessionInfo').innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align: center; color: #ff6b6b; padding: 20px;">
+                Ошибка: ${message}
+            </td>
+        </tr>
+    `;
+}
+</script>
+{% endblock %}

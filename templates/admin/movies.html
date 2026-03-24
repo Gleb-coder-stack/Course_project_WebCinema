@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Управление фильмами{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">УПРАВЛЕНИЕ ФИЛЬМАМИ</h1>
+    <a href="/admin" style="color: white; text-decoration: none;">← Назад</a>
+</div>
+
+<button onclick="showAddForm()" class="btn btn-add">+ Добавить фильм</button>
+
+<!-- Форма добавления/редактирования -->
+<div id="movieForm" style="display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+    <h3 id="formTitle" style="color: white; margin-bottom: 20px;">Новый фильм</h3>
+    <input type="hidden" id="editId" value="">
+
+    <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="title" required style="width: 100%; padding: 10px; border-radius: 8px; border: none;">
+    </div>
+
+    <div class="form-group">
+        <label>Длительность</label>
+        <input type="text" id="duration" placeholder="169 мин." required style="width: 100%; padding: 10px; border-radius: 8px; border: none;">
+    </div>
+
+    <div class="form-group">
+        <label>Жанр</label>
+        <input type="text" id="genre" required style="width: 100%; padding: 10px; border-radius: 8px; border: none;">
+    </div>
+
+    <div class="form-group">
+        <label>Возрастной рейтинг</label>
+        <input type="text" id="age_rating" placeholder="12+" required style="width: 100%; padding: 10px; border-radius: 8px; border: none;">
+    </div>
+
+    <button onclick="saveMovie()" class="btn btn-add">Сохранить</button>
+    <button onclick="hideForm()" class="btn" style="background: #666;">Отмена</button>
+</div>
+
+<!-- Таблица фильмов -->
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Длительность</th>
+            <th>Жанр</th>
+            <th>Рейтинг</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody id="moviesTableBody">
+        <tr>
+            <td colspan="6" style="text-align: center;">Загрузка...</td>
+        </tr>
+    </tbody>
+</table>
+
+<script>
+document.addEventListener('DOMContentLoaded', loadMovies);
+
+async function loadMovies() {
+    try {
+        const response = await fetch('/api/movies');
+        const movies = await response.json();
+
+        const tbody = document.getElementById('moviesTableBody');
+        tbody.innerHTML = '';
+
+        movies.forEach(movie => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${movie.id}</td>
+                <td>${movie.title}</td>
+                <td>${movie.duration}</td>
+                <td>${movie.genre}</td>
+                <td>${movie.age_rating}</td>
+                <td>
+                    <button class="btn btn-edit" onclick='editMovie(${JSON.stringify(movie)})'>✏️ Ред.</button>
+                    <button class="btn btn-delete" onclick="deleteMovie(${movie.id})">🗑️ Удал.</button>
+                </td>
+            `;
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки:', error);
+    }
+}
+
+function showAddForm() {
+    document.getElementById('formTitle').textContent = 'Новый фильм';
+    document.getElementById('editId').value = '';
+    document.getElementById('title').value = '';
+    document.getElementById('duration').value = '';
+    document.getElementById('genre').value = '';
+    document.getElementById('age_rating').value = '';
+    document.getElementById('movieForm').style.display = 'block';
+}
+
+function editMovie(movie) {
+    document.getElementById('formTitle').textContent = 'Редактирование фильма';
+    document.getElementById('editId').value = movie.id;
+    document.getElementById('title').value = movie.title;
+    document.getElementById('duration').value = movie.duration;
+    document.getElementById('genre').value = movie.genre;
+    document.getElementById('age_rating').value = movie.age_rating;
+    document.getElementById('movieForm').style.display = 'block';
+}
+
+function hideForm() {
+    document.getElementById('movieForm').style.display = 'none';
+}
+
+async function saveMovie() {
+    const id = document.getElementById('editId').value;
+    const movieData = {
+        title: document.getElementById('title').value,
+        duration: document.getElementById('duration').value,
+        genre: document.getElementById('genre').value,
+        age_rating: document.getElementById('age_rating').value
+    };
+
+    if (!movieData.title || !movieData.duration || !movieData.genre || !movieData.age_rating) {
+        alert('Заполните все поля');
+        return;
+    }
+
+    try {
+        let response;
+        if (id) {
+            response = await fetch(`/api/movies/update/${id}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(movieData)
+            });
+        } else {
+            response = await fetch('/api/movies/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(movieData)
+            });
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            hideForm();
+            await loadMovies();
+            alert(id ? '✅ Фильм обновлен' : '✅ Фильм добавлен');
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('❌ Ошибка сохранения');
+    }
+}
+
+async function deleteMovie(id) {
+    if (!confirm('Удалить фильм?')) return;
+
+    try {
+        const response = await fetch(`/api/movies/delete/${id}`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+        if (result.success) {
+            await loadMovies();
+            alert('✅ Фильм удален');
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Не удалось удалить'));
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('❌ Ошибка удаления');
+    }
+}
+</script>
+{% endblock %}

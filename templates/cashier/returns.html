@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Возврат билетов{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 class="page-title">ВОЗВРАТ БИЛЕТОВ</h1>
+    <a href="/cashier" style="color: white; text-decoration: none;">← Главная</a>
+</div>
+
+<div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+    <h3 style="color: white; margin-bottom: 10px;">Поиск по сеансу:</h3>
+    <select id="sessionSelect" style="width: 100%; padding: 12px; border-radius: 8px; border: none;">
+        <option value="">Выберите сеанс</option>
+    </select>
+</div>
+
+<div id="ticketsList" style="display: none;">
+    <h3 style="color: white; margin: 20px 0;">Список билетов</h3>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden;">
+            <thead>
+                <tr style="background: #6A11CB; color: white;">
+                    <th style="padding: 12px;">ФИО</th>
+                    <th style="padding: 12px;">Ряд</th>
+                    <th style="padding: 12px;">Место</th>
+                    <th style="padding: 12px;">Цена</th>
+                    <th style="padding: 12px;">Действие</th>
+                  </tr>
+            </thead>
+            <tbody id="ticketsBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let sessions = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSessions();
+});
+
+async function loadSessions() {
+    try {
+        const response = await fetch('/api/sessions');
+        sessions = await response.json();
+
+        const select = document.getElementById('sessionSelect');
+        sessions.forEach(session => {
+            const option = document.createElement('option');
+            option.value = session.id;
+            option.textContent = `${session.date} | ${session.movie} | ${session.start_time} | Зал ${session.hall}`;
+            select.appendChild(option);
+        });
+
+        select.addEventListener('change', onSessionChange);
+
+    } catch (error) {
+        console.error('Ошибка загрузки сеансов:', error);
+    }
+}
+
+async function onSessionChange(e) {
+    const sessionId = e.target.value;
+    if (!sessionId) {
+        document.getElementById('ticketsList').style.display = 'none';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/tickets/${sessionId}`);
+        const tickets = await response.json();
+
+        console.log('Получены билеты:', tickets);
+
+        displayTickets(tickets);
+
+    } catch (error) {
+        console.error('Ошибка загрузки билетов:', error);
+    }
+}
+
+function displayTickets(tickets) {
+    const tbody = document.getElementById('ticketsBody');
+    tbody.innerHTML = '';
+
+    if (!tickets || tickets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Нет проданных билетов</td></tr>';
+        document.getElementById('ticketsList').style.display = 'block';
+        return;
+    }
+
+    tickets.forEach(ticket => {
+        const row = tbody.insertRow();
+        // Используем правильные имена полей: row_number и seat_number
+        row.innerHTML = `
+            <td style="padding: 10px;">${ticket.customer_name || ''}</td>
+            <td style="padding: 10px;">${ticket.row_number || ticket.row || ''}</td>
+            <td style="padding: 10px;">${ticket.seat_number || ticket.seat || ''}</td>
+            <td style="padding: 10px;">${ticket.price || 0} ₽</td>
+            <td style="padding: 10px;">
+                <button onclick="returnTicket(${ticket.id})" class="btn btn-delete" style="padding: 5px 15px;">Возврат</button>
+            </td>
+        `;
+    });
+
+    document.getElementById('ticketsList').style.display = 'block';
+}
+
+async function returnTicket(ticketId) {
+    if (!confirm('Оформить возврат билета?')) return;
+
+    try {
+        const response = await fetch(`/api/tickets/return/${ticketId}`, {
+            method: 'POST'
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert('✅ Возврат оформлен');
+            // Обновляем список билетов
+            const sessionId = document.getElementById('sessionSelect').value;
+            const ticketsResponse = await fetch(`/api/tickets/${sessionId}`);
+            const newTickets = await ticketsResponse.json();
+            displayTickets(newTickets);
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Не удалось оформить возврат'));
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('❌ Ошибка при возврате билета');
+    }
+}
+</script>
+{% endblock %}
