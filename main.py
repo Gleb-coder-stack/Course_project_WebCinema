@@ -43,9 +43,11 @@ async def index(request: Request):
 async def schedule(request: Request):
     return templates.TemplateResponse("schedule.html", {"request": request})
 
+
 @app.get("/all-films", response_class=HTMLResponse)
 async def all_films(request: Request):
     return templates.TemplateResponse("all-films.html", {"request": request})
+
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -121,12 +123,12 @@ async def cashier_hall(request: Request, session_id: int):
 
 @app.get("/cashier/checkout")
 async def cashier_checkout(
-    request: Request,
-    session_id: int,
-    seat_id: int,
-    row: int,
-    seat: int,
-    price: int
+        request: Request,
+        session_id: int,
+        seat_id: int,
+        row: int,
+        seat: int,
+        price: int
 ):
     try:
         session = db.get_session_by_id(session_id)
@@ -324,8 +326,8 @@ async def get_seats(hall_id: int):
 
 @app.get("/api/tickets-list")
 async def get_all_tickets(
-    session_id: Optional[int] = None,
-    date: Optional[str] = None
+        session_id: Optional[int] = None,
+        date: Optional[str] = None
 ):
     """Получение всех билетов с фильтрацией"""
     try:

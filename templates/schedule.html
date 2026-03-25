@@ -7,20 +7,20 @@
 
 <div style="margin-bottom: 30px;">
     <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-        <button onclick="showTab('upcoming')" class="btn btn-add" id="upcomingBtn">Предстоящие сеансы</button>
-        <button onclick="showTab('past')" class="btn" id="pastBtn">Прошедшие за месяц</button>
+        <button onclick="showTab('upcoming')" class="btn btn-add" id="upcomingBtn" style="flex: 1; text-align: center; padding: 12px 24px; font-size: 1.1rem;">Предстоящие сеансы</button>
+        <button onclick="showTab('past')" class="btn" id="pastBtn" style="flex: 1; text-align: center; padding: 12px 24px; font-size: 1.1rem; background: #666;">Прошедшие за месяц</button>
     </div>
 </div>
 
 <div id="upcomingTab">
     <div class="movies-grid" id="upcomingSessions">
-        <div style="color: white; text-align: center; padding: 40px;">Загрузка...</div>
+        <div style="color: white; text-align: center;">Загрузка...</div>
     </div>
 </div>
 
 <div id="pastTab" style="display: none;">
     <div class="movies-grid" id="pastSessions">
-        <div style="color: white; text-align: center; padding: 40px;">Загрузка...</div>
+        <div style="color: white; text-align: center;">Загрузка...</div>
     </div>
 </div>
 
@@ -70,8 +70,7 @@ function displaySessions(sessions, containerId) {
         if (session.movie && session.movie.includes('Джон Уик')) ageRating = '18+';
 
         card.innerHTML = `
-            <div class="movie-poster"></div>
-            <div class="movie-info">
+            <div class="movie-info" style="padding: 20px;">
                 <div class="movie-title">${session.movie || 'Без названия'}</div>
                 <div class="movie-detail"><span>Дата</span> ${session.date || '--'}</div>
                 <div class="movie-detail"><span>Начало</span> ${session.start_time || '--:--'}</div>
@@ -94,12 +93,16 @@ function showTab(tab) {
         upcomingTab.style.display = 'block';
         pastTab.style.display = 'none';
         upcomingBtn.style.background = '#2196F3';
+        upcomingBtn.style.color = 'white';
         pastBtn.style.background = '#666';
+        pastBtn.style.color = 'white';
     } else {
         upcomingTab.style.display = 'none';
         pastTab.style.display = 'block';
         upcomingBtn.style.background = '#666';
+        upcomingBtn.style.color = 'white';
         pastBtn.style.background = '#2196F3';
+        pastBtn.style.color = 'white';
     }
 }
 </script>

@@ -30,13 +30,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        // Показываем первые 4 фильма
         movies.slice(0, 4).forEach(movie => {
             const card = document.createElement('div');
             card.className = 'movie-card';
             card.innerHTML = `
-                <div class="movie-poster"></div>
-                <div class="movie-info">
+                <div class="movie-info" style="padding: 20px;">
                     <div class="movie-title">${movie.title}</div>
                     <div class="movie-detail"><span>Жанр</span> ${movie.genre}</div>
                     <div class="movie-detail"><span>Время</span> ${movie.duration}</div>
